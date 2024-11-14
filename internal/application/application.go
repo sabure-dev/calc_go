@@ -48,13 +48,13 @@ func (a *Application) Run() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/calculate", a.calculateHandler)
 
-	handler := loggingMiddleware(mux)
+	handler := corsMiddleware(loggingMiddleware(mux))
 
 	a.server = &http.Server{
 		Addr:    ":" + a.config.Port,
 		Handler: handler,
 	}
 
-	log.Printf("Запуска сервера на порту %s\n", a.config.Port)
+	log.Printf("Запуск сервера на порту %s\n", a.config.Port)
 	return a.server.ListenAndServe()
 }
