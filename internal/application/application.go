@@ -1,46 +1,60 @@
 package application
 
 import (
-	"bufio"
 	"log"
+	"net/http"
 	"os"
-	"strings"
 
-	rpn "github.com/sabure/calc_go/pkg/calculation"
+	"github.com/joho/godotenv"
 )
 
+type Config struct {
+	Port string
+}
+
 type Application struct {
+	config *Config
+	server *http.Server
 }
 
 func New() *Application {
-	return &Application{}
+	return &Application{
+		config: loadConfig(),
+	}
 }
 
-// Функция запуска приложения
-// тут будем читать введенную строку и после нажатия ENTER писать результат работы программы на экране
-// если пользователь ввел exit - то останаваливаем приложение
-func (a *Application) Run() error {
-	for {
-		// читаем выражение для вычисления из командной строки
-		log.Println("input expression")
-		reader := bufio.NewReader(os.Stdin)
-		text, err := reader.ReadString('\n')
-		if err != nil {
-			log.Println("failed to read expression from console")
-		}
-		// убираем пробелы, чтобы оставить только вычислемое выражение
-		text = strings.TrimSpace(text)
-		// выходим, если ввели команду "exit"
-		if text == "exit" {
-			log.Println("aplication was successfully closed")
-			return nil
-		}
-		//вычисляем выражение
-		result, err := rpn.Calc(text)
-		if err != nil {
-			log.Println(text, " calculation failed wit error: ", err)
-		} else {
-			log.Println(text, "=", result)
-		}
+func loadConfig() *Config {
+	config := &Config{}
+
+	log.Println("Загрузка файла конфигурации...")
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Ошибка загрузки файла конфигурации:", err)
+	} else {
+		log.Println("Файл конфигурации загружен успешно")
 	}
+
+	config.Port = os.Getenv("PORT")
+
+	if config.Port == "" {
+		log.Println("PORT не установлен, используется порт по умолчанию 8080")
+		config.Port = "8080"
+	}
+
+	return config
+}
+
+func (a *Application) Run() error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/calculate", a.calculateHandler)
+
+	handler := loggingMiddleware(mux)
+
+	a.server = &http.Server{
+		Addr:    ":" + a.config.Port,
+		Handler: handler,
+	}
+
+	log.Printf("Запуска сервера на порту %s\n", a.config.Port)
+	return a.server.ListenAndServe()
 }

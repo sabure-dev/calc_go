@@ -1,9 +1,7 @@
-package rpn_test
+package calculation
 
 import (
 	"testing"
-
-	rpn "github.com/sabure/calc_go/pkg/calculation"
 )
 
 func TestCalc(t *testing.T) {
@@ -36,7 +34,7 @@ func TestCalc(t *testing.T) {
 
 	for _, testCase := range testCasesSuccess {
 		t.Run(testCase.name, func(t *testing.T) {
-			val, err := rpn.Calc(testCase.expression)
+			val, err := Calc(testCase.expression)
 			if err != nil {
 				t.Fatalf("successful case %s returns error", testCase.expression)
 			}
@@ -67,11 +65,23 @@ func TestCalc(t *testing.T) {
 			name:       "empty",
 			expression: "",
 		},
+		{
+			name:       "consecutive operators",
+			expression: "2++2",
+		},
+		{
+			name:       "consecutive operators",
+			expression: "2+-2",
+		},
+		{
+			name:       "consecutive operators",
+			expression: "2//2",
+		},
 	}
 
 	for _, testCase := range testCasesFail {
 		t.Run(testCase.name, func(t *testing.T) {
-			val, err := rpn.Calc(testCase.expression)
+			val, err := Calc(testCase.expression)
 			if err == nil {
 				t.Fatalf("expression %s is invalid but result  %f was obtained", testCase.expression, val)
 			}

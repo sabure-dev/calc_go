@@ -1,10 +1,14 @@
 package main
 
 import (
-	"github.com/sabure/calc_go/internal/application"
+	"log"
+
+	"github.com/sabure-dev/calc_go/internal/application"
 )
 
 func main() {
 	app := application.New()
-	app.Run()
+	if err := app.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
