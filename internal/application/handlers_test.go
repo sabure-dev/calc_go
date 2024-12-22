@@ -34,14 +34,14 @@ func TestCalculateHandler(t *testing.T) {
 			name:          "invalid expression",
 			method:        http.MethodPost,
 			body:          CalculationRequest{Expression: "2++2"},
-			expectedCode:  http.StatusBadRequest,
+			expectedCode:  http.StatusUnprocessableEntity,
 			expectedError: true,
 		},
 		{
 			name:          "invalid json",
 			method:        http.MethodPost,
 			body:          "invalid json",
-			expectedCode:  http.StatusBadRequest,
+			expectedCode:  http.StatusUnprocessableEntity,
 			expectedError: true,
 		},
 	}
@@ -60,7 +60,7 @@ func TestCalculateHandler(t *testing.T) {
 				}
 			}
 
-			req := httptest.NewRequest(tt.method, "/calculate", bytes.NewBuffer(reqBody))
+			req := httptest.NewRequest(tt.method, "/api/v1/calculate", bytes.NewBuffer(reqBody))
 			req.Header.Set("Content-Type", "application/json")
 
 			rr := httptest.NewRecorder()
