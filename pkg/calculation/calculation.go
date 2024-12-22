@@ -34,6 +34,11 @@ func isSign(value rune) bool {
 }
 
 func Calc(expression string) (float64, error) {
+	if expression == "" {
+		return 0, NewExpressionTooShortError()
+	}
+
+	// Проверка скобок
 	openBrackets := 0
 	for _, char := range expression {
 		if char == '(' {
@@ -49,118 +54,141 @@ func Calc(expression string) (float64, error) {
 		return 0, NewBracketsExpressionError(fmt.Errorf("не хватает закрывающей скобки"))
 	}
 
-	if !strings.ContainsAny(expression, "()") && len(expression) < 3 {
-		isNegativeNumber := false
-		if len(expression) >= 2 && expression[0] == '-' {
-			isNegativeNumber = true
-			for _, c := range expression[1:] {
-				if c < '0' || c > '9' {
-					isNegativeNumber = false
-					break
-				}
+	// Обработка скобок
+	bracketStart := -1
+	maxDepth := 0
+	currentDepth := 0
+
+	// Находим самые глубокие скобки
+	for i, char := range expression {
+		if char == '(' {
+			currentDepth++
+			if currentDepth > maxDepth {
+				maxDepth = currentDepth
+				bracketStart = i
 			}
-		}
-		if !isNegativeNumber {
-			return 0, NewExpressionTooShortError()
+		} else if char == ')' && currentDepth == maxDepth && bracketStart != -1 {
+			// Вычисляем значение в скобках
+			innerResult, err := Calc(expression[bracketStart+1 : i])
+			if err != nil {
+				return 0, err
+			}
+
+			// Заменяем скобочное выражение на результат
+			innerStr := fmt.Sprintf("%g", innerResult)
+			if innerResult < 0 {
+				innerStr = "(" + innerStr + ")"
+			}
+			expression = expression[:bracketStart] + innerStr + expression[i+1:]
+
+			// Сбрасываем поиск скобок
+			bracketStart = -1
+			maxDepth = 0
+			currentDepth = 0
+			i = -1 // При следующей итерации станет 0
+			continue
+		} else if char == ')' {
+			currentDepth--
 		}
 	}
 
-	if len(expression) >= 3 && expression[0] == '(' && expression[len(expression)-1] == ')' {
-		inner := expression[1 : len(expression)-1]
-		if inner == "" {
-			return 0, NewExpressionTooShortError()
-		}
-		if inner[0] == '-' {
-			for _, c := range inner[1:] {
-				if c < '0' || c > '9' {
-					break
-				}
-			}
-			return stringToFloat64(inner), nil
-		}
+	// Проверка на простое отрицательное число
+	if len(expression) >= 2 && expression[0] == '-' {
 		isNumber := true
-		for _, c := range inner {
+		for _, c := range expression[1:] {
 			if c < '0' || c > '9' {
 				isNumber = false
 				break
 			}
 		}
 		if isNumber {
-			return stringToFloat64(inner), nil
+			return stringToFloat64(expression), nil
 		}
 	}
+
+	if !strings.ContainsAny(expression, "+-*/") {
+		if len(expression) == 0 {
+			return 0, NewExpressionTooShortError()
+		}
+		return stringToFloat64(expression), nil
+	}
+
+	var numbers []float64
+	var operators []rune
+	var currentNumber string
+	var lastChar rune
+	var lastWasOperator bool
 
 	for i := 0; i < len(expression); i++ {
-		if expression[i] == '(' {
-			openCount := 1
-			j := i + 1
-			for j < len(expression) && openCount > 0 {
-				if expression[j] == '(' {
-					openCount++
-				} else if expression[j] == ')' {
-					openCount--
-				}
-				j++
-			}
-			if j <= len(expression) && openCount == 0 {
-				innerResult, err := Calc(expression[i+1 : j-1])
-				if err != nil {
-					return 0, NewBracketsExpressionError(err)
-				}
-				newExpr := expression[:i] + fmt.Sprintf("%g", innerResult)
-				if j < len(expression) {
-					newExpr += expression[j:]
-				}
-				return Calc(newExpr)
-			}
-		}
-	}
+		char := rune(expression[i])
 
-	for i := 1; i < len(expression); i++ {
-		if isSign(rune(expression[i])) && isSign(rune(expression[i-1])) {
-			if expression[i] == '-' && (expression[i-1] == '*' || expression[i-1] == '/') {
-				continue
-			}
-			return 0, NewConsecutiveOperatorsError()
-		}
-	}
-
-	var res float64
-	var b string
-	var c rune = 0
-	var resflag bool = false
-
-	for _, value := range expression + "s" {
 		switch {
-		case value == ' ':
+		case char == ' ':
 			continue
-		case (value >= '0' && value <= '9') || value == '-':
-			b += string(value)
-		case isSign(value) || value == 's':
-			if resflag {
-				switch c {
-				case '+':
-					res += stringToFloat64(b)
-				case '-':
-					res -= stringToFloat64(b)
-				case '*':
-					res *= stringToFloat64(b)
-				case '/':
-					if stringToFloat64(b) == 0 {
-						return 0, NewDivisionByZeroError()
-					}
-					res /= stringToFloat64(b)
-				}
-			} else {
-				resflag = true
-				res = stringToFloat64(b)
+		case char >= '0' && char <= '9':
+			currentNumber += string(char)
+			lastWasOperator = false
+		case char == '-' && (i == 0 || lastChar == '(' || isSign(lastChar)):
+			if lastWasOperator && lastChar != '(' {
+				return 0, NewConsecutiveOperatorsError()
 			}
-			b = ""
-			c = value
+			currentNumber = string(char)
+			lastWasOperator = false
+		case isSign(char):
+			if lastWasOperator {
+				return 0, NewConsecutiveOperatorsError()
+			}
+			if currentNumber != "" {
+				numbers = append(numbers, stringToFloat64(currentNumber))
+				currentNumber = ""
+			}
+			operators = append(operators, char)
+			lastWasOperator = true
+		case char == '(' || char == ')':
+			if currentNumber != "" {
+				numbers = append(numbers, stringToFloat64(currentNumber))
+				currentNumber = ""
+			}
+			lastWasOperator = false
 		default:
-			return 0, NewInvalidCharError(value)
+			return 0, NewInvalidCharError(char)
+		}
+		lastChar = char
+	}
+
+	if currentNumber != "" {
+		numbers = append(numbers, stringToFloat64(currentNumber))
+	}
+
+	if len(numbers) == 0 || len(numbers) != len(operators)+1 {
+		return 0, NewInvalidOperatorPositionError()
+	}
+
+	// Вычисление умножения и деления
+	for i := 0; i < len(operators); i++ {
+		if operators[i] == '*' || operators[i] == '/' {
+			if operators[i] == '*' {
+				numbers[i+1] = numbers[i] * numbers[i+1]
+			} else {
+				if numbers[i+1] == 0 {
+					return 0, NewDivisionByZeroError()
+				}
+				numbers[i+1] = numbers[i] / numbers[i+1]
+			}
+			numbers[i] = 0
+			operators[i] = '+'
 		}
 	}
 
-	return res, nil
+	// Вычисление сложения и вычитания
+	result := numbers[0]
+	for i := 0; i < len(operators); i++ {
+		if operators[i] == '+' {
+			result += numbers[i+1]
+		} else if operators[i] == '-' {
+			result -= numbers[i+1]
+		}
+	}
+
+	return result, nil
 }

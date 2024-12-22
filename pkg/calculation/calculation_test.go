@@ -30,6 +30,26 @@ func TestCalc(t *testing.T) {
 			expression:     "1/2",
 			expectedResult: 0.5,
 		},
+		{
+			name:           "negative",
+			expression:     "-1+1",
+			expectedResult: 0,
+		},
+		{
+			name:           "negative",
+			expression:     "1*(-1)",
+			expectedResult: -1,
+		},
+		{
+			name:           "negative",
+			expression:     "1/(-1)",
+			expectedResult: -1,
+		},
+		{
+			name:           "negative",
+			expression:     "1+(-1)",
+			expectedResult: 0,
+		},
 	}
 
 	for _, testCase := range testCasesSuccess {
