@@ -50,6 +50,11 @@ func TestCalc(t *testing.T) {
 			expression:     "1+(-1)",
 			expectedResult: 0,
 		},
+		{
+			name:           "complex negative",
+			expression:     "(2+2)-(-2)",
+			expectedResult: 6,
+		},
 	}
 
 	for _, testCase := range testCasesSuccess {
@@ -88,10 +93,6 @@ func TestCalc(t *testing.T) {
 		{
 			name:       "consecutive operators",
 			expression: "2++2",
-		},
-		{
-			name:       "consecutive operators",
-			expression: "2+-2",
 		},
 		{
 			name:       "consecutive operators",

@@ -56,3 +56,9 @@ func NewConsecutiveOperatorsError() error {
 		Message: "некорректное выражение: последовательные операторы недопустимы",
 	}
 }
+
+func NewInvalidCharacterError() error {
+	return &CalculationError{
+		Message: "некорректный символ в выражении",
+	}
+}
