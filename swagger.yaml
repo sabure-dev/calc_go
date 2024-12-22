@@ -94,6 +94,11 @@ components:
     ErrorResponse:
       type: object
       properties:
+        result:
+          type: number
+          format: float
+          description: Результат вычисления (0, если ошибка)
+          example: 0
         error:
           type: string
           description: Описание ошибки
