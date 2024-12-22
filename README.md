@@ -40,7 +40,7 @@
    ```
 
 
-### Docker 🐳
+### Docker (предпочитаемый способ запуска)🐳
 
 1. Сборка и запуск через docker-compose:
    ```bash
@@ -105,13 +105,13 @@
 
 Простое выражение
 ```bash
-curl -X POST http://localhost:8080/calculate \
+curl -X POST http://localhost:8080/api/v1/calculate \
 -H "Content-Type: application/json" \
 -d '{"expression": "2+2"}'
 ```
 Выражение со скобками
 ```bash
-curl -X POST http://localhost:8080/calculate \
+curl -X POST http://localhost:8080/api/v1/calculate \
 -H "Content-Type: application/json" \
 -d '{"expression": "(2+2)*2"}'
 ```
@@ -119,8 +119,6 @@ curl -X POST http://localhost:8080/calculate \
 ## API документация 📚
 
 API документация доступна через Swagger UI после запуска проекта:
-
-- Локально: http://localhost:8081
 - Docker: http://localhost:8081
 
 ### Swagger UI
