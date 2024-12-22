@@ -1,6 +1,7 @@
 package calculation
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -28,6 +29,21 @@ func isSign(value rune) bool {
 }
 
 func Calc(expression string) (float64, error) {
+	openBrackets := 0
+	for _, char := range expression {
+		if char == '(' {
+			openBrackets++
+		} else if char == ')' {
+			openBrackets--
+			if openBrackets < 0 {
+				return 0, NewBracketsExpressionError(fmt.Errorf("лишняя закрывающая скобка"))
+			}
+		}
+	}
+	if openBrackets > 0 {
+		return 0, NewBracketsExpressionError(fmt.Errorf("не хватает закрывающей скобки"))
+	}
+
 	if len(expression) < 3 {
 		return 0, NewExpressionTooShortError()
 	}

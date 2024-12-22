@@ -29,7 +29,7 @@
    cd calc_go
    ```
 
-2. Создайте файл `.env` в корневой директории:
+2. Создайте файл `.env` в корневой директории, чтобы задать порт для сервера. По умолчанию используется порт 8080:
    ```env
    PORT=8080
    ```
@@ -58,7 +58,7 @@
 
 ### Endpoint
 
-`POST /calculate`
+`POST /api/v1/calculate`
 
 ### Формат запроса
 
@@ -71,20 +71,35 @@
 ### Формат ответа
 
 Успешный ответ:
+**Successful Response (200):**
 ```json
 {
   "result": 6
 }
 ```
 
-Ответ с ошибкой:
+Ответы с ошибкой:
+
+**Validation Error (422):**
 ```json
-{ 
-  "result": 0,
-  "error": "описание ошибки"
+{
+  "error": "Expression is not valid"
 }
 ```
 
+**Method Not Allowed (405):**
+```json
+{
+  "error": "Method not allowed"
+}
+```
+
+**Internal Server Error (500):**
+```json
+{
+  "error": "Internal server error"
+}
+```
 
 ### Примеры запросов
 

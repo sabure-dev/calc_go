@@ -46,7 +46,7 @@ func loadConfig() *Config {
 
 func (a *Application) Run() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/calculate", a.calculateHandler)
+	mux.HandleFunc("/api/v1/calculate", a.calculateHandler)
 
 	handler := corsMiddleware(loggingMiddleware(mux))
 

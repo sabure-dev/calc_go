@@ -12,7 +12,7 @@ servers:
     description: Локальный сервер разработки
 
 paths:
-  /calculate:
+  /api/v1/calculate:
     post:
       tags:
         - Calculation
@@ -32,14 +32,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CalculationResponse'
-        '400':
-          description: Ошибка в запросе или вычислении
+        '405':
+          description: Метод не разрешен
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '405':
-          description: Метод не разрешен
+        '422':
+          description: Ошибка в запросе
           content:
             application/json:
               schema:
@@ -50,6 +50,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
     options:
       tags:
         - Calculation
@@ -89,23 +90,14 @@ components:
           format: float
           description: Результат вычисления
           example: 8.0
-        error:
-          type: string
-          description: Сообщение об ошибке (если есть)
-          example: null
     
     ErrorResponse:
       type: object
       properties:
-        result:
-          type: number
-          format: float
-          description: Результат вычисления (0 в случае ошибки)
-          example: 0
         error:
           type: string
           description: Описание ошибки
-          example: "деление на ноль"
+          example: "Internal server error"
 
 tags:
   - name: Calculation

@@ -12,7 +12,7 @@ type CalculationRequest struct {
 }
 
 type CalculationResponse struct {
-	Result float64 `json:"result"`
+	Result float64 `json:"result,omitempty"`
 	Error  string  `json:"error,omitempty"`
 }
 
@@ -20,34 +20,33 @@ func (a *Application) calculateHandler(w http.ResponseWriter, r *http.Request) {
 	wrapped := w.(*responseWriter)
 
 	if r.Method != http.MethodPost {
-		wrapped.error = "неверный метод запроса"
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		wrapped.error = "метод не разрешен"
+		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req CalculationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		wrapped.error = "некорректное тело запроса: " + err.Error()
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		wrapped.error = "некорректное тело запроса"
+		http.Error(w, `{"error": "Expression is not valid"}`, http.StatusUnprocessableEntity)
 		return
 	}
 
-	wrapped.expression = req.Expression
 	result, err := calculation.Calc(req.Expression)
 	response := CalculationResponse{}
 
 	if err != nil {
-		wrapped.error = "ошибка вычисления: " + err.Error()
-		response.Error = err.Error()
-		w.WriteHeader(http.StatusBadRequest)
+		wrapped.error = err.Error()
+		response.Error = "Expression is not valid"
+		w.WriteHeader(http.StatusUnprocessableEntity)
 	} else {
 		response.Result = result
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		wrapped.error = "ошибка сериализации ответа: " + err.Error()
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		wrapped.error = "ошибка сериализации"
+		http.Error(w, `{"error": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 }
