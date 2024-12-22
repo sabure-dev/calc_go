@@ -2,26 +2,31 @@ package calculation
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
 func stringToFloat64(str string) float64 {
-	degree := float64(1)
-	var res float64 = 0
-	var invers bool = false
-	for i := len(str); i > 0; i-- {
-		if str[i-1] == '-' {
-			invers = true
-		} else {
-			res += float64(9-int('9'-str[i-1])) * degree
-			degree *= 10
+	if str == "" {
+		return 0
+	}
+
+	isNegative := str[0] == '-'
+	if isNegative {
+		str = str[1:]
+	}
+
+	var result float64
+	for _, digit := range str {
+		if digit >= '0' && digit <= '9' {
+			result = result*10 + float64(digit-'0')
 		}
 	}
-	if invers {
-		res = 0 - res
+
+	if isNegative {
+		result = -result
 	}
-	return res
+
+	return result
 }
 
 func isSign(value rune) bool {
@@ -44,12 +49,78 @@ func Calc(expression string) (float64, error) {
 		return 0, NewBracketsExpressionError(fmt.Errorf("не хватает закрывающей скобки"))
 	}
 
-	if len(expression) < 3 {
-		return 0, NewExpressionTooShortError()
+	if !strings.ContainsAny(expression, "()") && len(expression) < 3 {
+		isNegativeNumber := false
+		if len(expression) >= 2 && expression[0] == '-' {
+			isNegativeNumber = true
+			for _, c := range expression[1:] {
+				if c < '0' || c > '9' {
+					isNegativeNumber = false
+					break
+				}
+			}
+		}
+		if !isNegativeNumber {
+			return 0, NewExpressionTooShortError()
+		}
+	}
+
+	if len(expression) >= 3 && expression[0] == '(' && expression[len(expression)-1] == ')' {
+		inner := expression[1 : len(expression)-1]
+		if inner == "" {
+			return 0, NewExpressionTooShortError()
+		}
+		if inner[0] == '-' {
+			for _, c := range inner[1:] {
+				if c < '0' || c > '9' {
+					break
+				}
+			}
+			return stringToFloat64(inner), nil
+		}
+		isNumber := true
+		for _, c := range inner {
+			if c < '0' || c > '9' {
+				isNumber = false
+				break
+			}
+		}
+		if isNumber {
+			return stringToFloat64(inner), nil
+		}
+	}
+
+	for i := 0; i < len(expression); i++ {
+		if expression[i] == '(' {
+			openCount := 1
+			j := i + 1
+			for j < len(expression) && openCount > 0 {
+				if expression[j] == '(' {
+					openCount++
+				} else if expression[j] == ')' {
+					openCount--
+				}
+				j++
+			}
+			if j <= len(expression) && openCount == 0 {
+				innerResult, err := Calc(expression[i+1 : j-1])
+				if err != nil {
+					return 0, NewBracketsExpressionError(err)
+				}
+				newExpr := expression[:i] + fmt.Sprintf("%g", innerResult)
+				if j < len(expression) {
+					newExpr += expression[j:]
+				}
+				return Calc(newExpr)
+			}
+		}
 	}
 
 	for i := 1; i < len(expression); i++ {
 		if isSign(rune(expression[i])) && isSign(rune(expression[i-1])) {
+			if expression[i] == '-' && (expression[i-1] == '*' || expression[i-1] == '/') {
+				continue
+			}
 			return 0, NewConsecutiveOperatorsError()
 		}
 	}
@@ -58,77 +129,12 @@ func Calc(expression string) (float64, error) {
 	var b string
 	var c rune = 0
 	var resflag bool = false
-	var isc int
-	var countc int = 0
-
-	for _, value := range expression {
-		if isSign(value) {
-			countc++
-		}
-	}
-
-	if isSign(rune(expression[0])) || isSign(rune(expression[len(expression)-1])) {
-		return 0, NewInvalidOperatorPositionError()
-	}
-	for i, value := range expression {
-		if value == '(' {
-			isc = i
-		}
-		if value == ')' {
-			calc, err := Calc(expression[isc+1 : i])
-			if err != nil {
-				return 0, NewBracketsExpressionError(err)
-			}
-			calcstr := strconv.FormatFloat(calc, 'f', 0, 64)
-			i2 := i
-			i -= len(expression[isc:i+1]) - len(calcstr)
-
-			expression = strings.Replace(expression, expression[isc:i2+1], calcstr, 1)
-		}
-	}
-	if countc > 1 {
-		for i := 1; i < len(expression); i++ {
-			value := rune(expression[i])
-
-			if value == '*' || value == '/' {
-				var imin int = i - 1
-				if imin != 0 {
-					for !isSign(rune(expression[imin])) && imin > 0 {
-						imin--
-					}
-					imin++
-				}
-				var imax int = i + 1
-				if imax == len(expression) {
-					imax--
-				} else {
-					for !isSign(rune(expression[imax])) && imax < len(expression)-1 {
-						imax++
-					}
-				}
-				if imax == len(expression)-1 {
-					imax++
-				}
-				calc, err := Calc(expression[imin:imax])
-				if err != nil {
-					return 0, NewSubExpressionError(err)
-				}
-				calcstr := strconv.FormatFloat(calc, 'f', 0, 64)
-				i -= len(expression[isc:i+1]) - len(calcstr) - 1
-
-				expression = strings.Replace(expression, expression[imin:imax], calcstr, 1)
-			}
-			if value == '+' || value == '-' || value == '*' || value == '/' {
-				c = value
-			}
-		}
-	}
 
 	for _, value := range expression + "s" {
 		switch {
 		case value == ' ':
 			continue
-		case value > 47 && value < 58:
+		case (value >= '0' && value <= '9') || value == '-':
 			b += string(value)
 		case isSign(value) || value == 's':
 			if resflag {
@@ -149,13 +155,12 @@ func Calc(expression string) (float64, error) {
 				resflag = true
 				res = stringToFloat64(b)
 			}
-			b = strings.ReplaceAll(b, b, "")
+			b = ""
 			c = value
-
-		case value == 's':
 		default:
 			return 0, NewInvalidCharError(value)
 		}
 	}
+
 	return res, nil
 }
