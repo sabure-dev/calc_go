@@ -59,12 +59,13 @@ curl http://localhost:8080/api/v1/expressions/:id
 ```
 
 ## Архитектура
+```mermaid
 graph TD
   User -->|POST /calculate| Orchestrator
   Orchestrator -->|Tasks| Agent
   Agent -->|Results| Orchestrator
   User -->|GET /expressions| Orchestrator
-
+```
 ## Примеры
 ### Ошибочное выражение
 ```bash
