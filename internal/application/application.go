@@ -1,60 +1,39 @@
 package application
 
 import (
-	"log"
-	"net/http"
+	"context"
+	"github.com/sabure-dev/calc_go/internal/config"
+	"github.com/sabure-dev/calc_go/internal/http/server"
+	"github.com/sabure-dev/calc_go/internal/service/orchestrator"
 	"os"
-
-	"github.com/joho/godotenv"
+	"os/signal"
 )
 
-type Config struct {
-	Port string
-}
-
 type Application struct {
-	config *Config
-	server *http.Server
+	config *config.Config
 }
 
 func New() *Application {
 	return &Application{
-		config: loadConfig(),
+		config: config.ConfigFromEnv(),
 	}
 }
 
-func loadConfig() *Config {
-	config := &Config{}
+func (a *Application) Run(ctx context.Context) int {
+	o := orchestrator.NewOrchestator()
+	shutdownFunc := server.Run(a.config.Addr, o, a.config)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
-	log.Println("Загрузка файла конфигурации...")
-	err := godotenv.Load()
+	<-c
+	cancel()
+	err := shutdownFunc(ctx)
 	if err != nil {
-		log.Println("Ошибка загрузки файла конфигурации:", err)
-	} else {
-		log.Println("Файл конфигурации загружен успешно")
+		return 1
 	}
-
-	config.Port = os.Getenv("PORT")
-
-	if config.Port == "" {
-		log.Println("PORT не установлен, используется порт по умолчанию 8080")
-		config.Port = "8080"
-	}
-
-	return config
-}
-
-func (a *Application) Run() error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/calculate", a.calculateHandler)
-
-	handler := corsMiddleware(loggingMiddleware(mux))
-
-	a.server = &http.Server{
-		Addr:    ":" + a.config.Port,
-		Handler: handler,
-	}
-
-	log.Printf("Запуск сервера на порту %s\n", a.config.Port)
-	return a.server.ListenAndServe()
+	o.Shutdown()
+	return 0
 }

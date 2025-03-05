@@ -1,27 +1,18 @@
-version: '3.8'
-
 services:
-  calc-api:
+
+  orchestrator:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/orchestrator/Dockerfile
     ports:
-      - "${PORT:-8080}:8080"
-    environment:
-      - PORT=8080
-    volumes:
-      - .env:/app/.env
-    restart: unless-stopped
+      - '8080:8080'
 
-  swagger-ui:
-    image: swaggerapi/swagger-ui
-    ports:
-      - "8081:8080"
+  agent:
+    build:
+      context: .
+      dockerfile: docker/agent/Dockerfile
     environment:
-      - SWAGGER_JSON=/swagger.yaml
-      - BASE_URL=/
-      - SWAGGER_UI_CORS=true
-    volumes:
-      - ./swagger.yaml:/swagger.yaml
+      - COMPUTING_POWER=25
+      - URL=http://orchestrator:8080
     depends_on:
-      - calc-api
+      - orchestrator
